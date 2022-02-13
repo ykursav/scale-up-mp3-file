@@ -7,7 +7,7 @@ This repo is for scaling mp3 files.
 1. Please run below command in your linux.
 
 ```bash
-sudo apt-get ffmpeg
+sudo apt install ffmpeg
 ```
 
 2. Next step is installing dependencies.

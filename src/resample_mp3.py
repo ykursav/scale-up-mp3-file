@@ -9,6 +9,7 @@ from pydub import AudioSegment
 from scipy.io import wavfile
 from scipy.signal import resample_poly, get_window, resample
 import shutil
+import subprocess
 
 
 class ResamplerException(Exception):
@@ -83,19 +84,33 @@ class Mp3Resampler:
         return temp_resampled_wav
 
     def resample_mp3_file(self, window_size: int = 2048) -> BytesIO:
-        temp_resampled_wav = self._resample_wav_file(window_size=window_size)
+        # temp_resampled_wav = self._resample_wav_file(window_size=window_size)
         temp_mp3_output = f"{self._temp_folder}/{str(uuid.uuid4())}.mp3"
-        segment = AudioSegment.from_wav(temp_resampled_wav)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-i",
+                self._mp3_file_path,
+                "-ar",
+                str(self._expected_sampling_rate),
+                temp_mp3_output,
+            ]
+        )
+        # segment = AudioSegment.from_mp3(self._mp3_file_path)
+        # segment.set_frame_rate(self._expected_sampling_rate)
+
         if self._output_file_path:
-            segment.export(self._output_file_path, format="mp3")
-            with open(self._output_file_path, "rb") as fh:
+            if os.path.isfile(temp_mp3_output):
+                shutil.copy(temp_mp3_output, self._output_file_path)
+            # segment.export(self._output_file_path, format="mp3")
+            with open(temp_mp3_output, "rb") as fh:
                 buffer = BytesIO(fh.read())
                 # clean up tmp files
                 self._clean_temp_files()
                 return buffer
 
         else:
-            segment.export(temp_mp3_output, format="mp3")
+            # segment.export(temp_mp3_output, format="mp3")
             with open(temp_mp3_output, "rb") as fh:
                 buffer = BytesIO(fh.read())
                 # clean up tmp files
