@@ -47,11 +47,6 @@ def test_resample_mp3_file(input_file_path, output_file_path, expected_frequency
         output_file_path=output_file_path,
     )
     resampled_mp3_file = mp3_resampler.resample_mp3_file()
-    # resampled_mp3_file = resample_mp3_file(
-    #     input_file_path=input_file_path,
-    #     output_file_path=output_file_path,
-    #     expected_frequency=expected_frequency,
-    # )
 
     # Then
     assert expected_frequency == get_sampling_rate(resampled_mp3_file)
