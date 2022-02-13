@@ -24,6 +24,10 @@ class CannotOpenMp3File(ResamplerException):
     pass
 
 
+class CannotProcessFile(ResamplerException):
+    pass
+
+
 class Mp3Resampler:
     def __init__(
         self,
@@ -31,6 +35,16 @@ class Mp3Resampler:
         expected_sampling_rate: int,
         output_file_path: Optional[str],
     ):
+        """MP3Resampler class with ffmpeg
+
+        Args:
+            input_file (Union[str, BytesIO]): Input File path or BytesIO buffer
+            expected_sampling_rate (int): Expected sample rate
+            output_file_path (Optional[str]): Output file path. If not given no file will be saved.
+
+        Raises:
+            CannotOpenMp3File: Incase of error due to opening mp3 file.
+        """
         self._expected_sampling_rate = expected_sampling_rate
         self._output_file_path = output_file_path
         self._temp_folder = f"temp/{str(uuid.uuid4())}"
@@ -84,25 +98,24 @@ class Mp3Resampler:
         return temp_resampled_wav
 
     def resample_mp3_file(self, window_size: int = 2048) -> BytesIO:
-        # temp_resampled_wav = self._resample_wav_file(window_size=window_size)
         temp_mp3_output = f"{self._temp_folder}/{str(uuid.uuid4())}.mp3"
-        subprocess.run(
-            [
-                "ffmpeg",
-                "-i",
-                self._mp3_file_path,
-                "-ar",
-                str(self._expected_sampling_rate),
-                temp_mp3_output,
-            ]
-        )
-        # segment = AudioSegment.from_mp3(self._mp3_file_path)
-        # segment.set_frame_rate(self._expected_sampling_rate)
+        try:
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-i",
+                    self._mp3_file_path,
+                    "-ar",
+                    str(self._expected_sampling_rate),
+                    temp_mp3_output,
+                ]
+            )
+        except Exception as e:
+            raise CannotProcessFile(f"File cannot be proceed due to: {str(e)}")
 
         if self._output_file_path:
             if os.path.isfile(temp_mp3_output):
                 shutil.copy(temp_mp3_output, self._output_file_path)
-            # segment.export(self._output_file_path, format="mp3")
             with open(temp_mp3_output, "rb") as fh:
                 buffer = BytesIO(fh.read())
                 # clean up tmp files
@@ -110,7 +123,6 @@ class Mp3Resampler:
                 return buffer
 
         else:
-            # segment.export(temp_mp3_output, format="mp3")
             with open(temp_mp3_output, "rb") as fh:
                 buffer = BytesIO(fh.read())
                 # clean up tmp files
@@ -120,62 +132,3 @@ class Mp3Resampler:
     def _clean_temp_files(self):
         if os.path.isdir(self._temp_folder):
             shutil.rmtree(self._temp_folder)
-
-
-# def resample_mp3_file(
-#     input_file: Union[str, BytesIO],
-#     expected_frequency: int,
-#     output_file_path: Optional[str] = None,
-# ) -> BytesIO:
-#     """Resamples mp3 files
-
-#     Args:
-#         input_file_path (str): Input file path
-#         expected_frequency (int): expected sampling rate
-#         output_file_path (Optional[str], optional): if it will output file output file path. Defaults to None.
-
-#     Raises:
-#         NoPathGivenToSaveFile: [description]
-
-#     Returns:
-#         [BytesIO]: returns BytesIO buffer can be used to save as file for user
-#     """
-
-#     temp_file = "src/temp/tmp.wav"
-#     temp_resampled_wav = "src/temp/tmp_resampled.wav"
-#     temp_mp3_file = "src/temp/temp.mp3"
-#     clean_temp_files([temp_file, temp_resampled_wav, temp_mp3_file])
-
-#     rate, data = wavfile.read(temp_file)
-
-#     number_of_samples = round(len(data) * float(expected_frequency) / rate)
-#     i_prev = 0
-#     resampled_data = np.empty([0, len(data)], dtype=np.float64)
-#     for i in range(64, len(data), 512):
-#         resampled_data[i:i_prev] = resample(
-#             data[i_prev:i], number_of_samples, window=get_window("hann", 512)
-#         )
-#         i_prev = i
-
-#     wavfile.write(
-#         temp_resampled_wav, expected_frequency, resampled_data.astype(np.int16)
-#     )
-
-#     segment = AudioSegment.from_wav(temp_resampled_wav)
-#     if output_file_path:
-#         segment.set_frame_rate(expected_frequency)
-#         segment.export(output_file_path, format="mp3")
-#         with open(output_file_path, "rb") as fh:
-#             buffer = BytesIO(fh.read())
-#             # clean up tmp files
-#             clean_temp_files([temp_file, temp_resampled_wav, temp_mp3_file])
-#             return buffer
-
-#     else:
-#         segment.set_frame_rate(expected_frequency)
-#         segment.export(temp_mp3_file, format="mp3")
-#         with open(temp_mp3_file, "rb") as fh:
-#             buffer = BytesIO(fh.read())
-#             # clean up tmp files
-#             clean_temp_files([temp_file, temp_resampled_wav, temp_mp3_file])
-#             return buffer
